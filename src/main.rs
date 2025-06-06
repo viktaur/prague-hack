@@ -1,6 +1,5 @@
 use actix_web::{post, web::{self, Json}, App, HttpResponse, HttpServer};
-
-use crate::io::angle_to_pulse_width;
+use crate::io::{write_to_pca, angle_to_pulse_width};
 
 mod io;
 
@@ -15,14 +14,15 @@ async fn main() -> std::io::Result<()> {
 }
 
 #[post("/deploy")]
-async fn deploy(>) -> HttpResponse {
+async fn deploy() -> HttpResponse {
     // let angle = payload.angle.clamp(0.0, 180.0);
+    let angle = 30.0;
     let pwm_value = angle_to_pulse_width(angle);
 
-    if let Err(e) = write_to_pca9685(SERVO_CHANNEL, pwm_value) {
+    if let Err(e) = write_to_pca(SERVO_CHANNEL, pwm_value) {
         eprintln!("I2C Error: {:?}", e);
-        HttpResponse::InternalServerError();
+        HttpResponse::InternalServerError().body("");
     }
 
-    HttpResponse::Ok()
+    HttpResponse::Ok().body("")
 }
