@@ -1,0 +1,9 @@
+[package]
+name = "prague-hack"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "4.11.0"
+anyhow = "1.0.98"
+rppal = "0.22.1"
