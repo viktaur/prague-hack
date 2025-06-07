@@ -6,6 +6,8 @@ mod io;
 
 const SERVO_CHANNEL: u8 = 0; // Servo connected to channel 0
 const PORT: u16 = 8080;
+const MIN_ANGLE: f32 = -90.0;
+const MAX_ANGLE: f32 = 90.0;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -26,8 +28,7 @@ struct DeployPayload {
 async fn deploy(payload: Json<DeployPayload>) -> HttpResponse {
     println!("Received: {:?}", payload);
 
-    let angle = payload.angle.clamp(-90.0, 90.0);
-    let pwm_value = angle_to_pulse_width(angle);
+    let pwm_value = angle_to_pulse_width(payload.angle);
 
     if let Err(e) = write_to_pca(SERVO_CHANNEL, pwm_value) {
         eprintln!("I2C Error: {:?}", e);

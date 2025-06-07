@@ -1,6 +1,8 @@
 use rppal::{i2c::I2c, pwm::Channel};
 use anyhow::Result;
 
+use crate::{MAX_ANGLE, MIN_ANGLE};
+
 // Default I2C address. It's just a way for the master to address the slave device.
 const PCA9685_ADDR: u16 = 0x40;
 const SERVO_CHANNEL: u8 = 0; // Servo connected to channel 0. If we had another one is would be 1, and 2, and so on.
@@ -11,12 +13,12 @@ const PWM_RESOLUTION: u16 = 4096;
 
 /// Converts the positional angle we want to the corresponding steps.
 pub fn angle_to_pulse_width(angle: f32) -> u16 {
-    let angle = angle.clamp(-90.0, 90.0);
+    let angle = angle.clamp(MIN_ANGLE, MAX_ANGLE);
     let min_pulse = 205.0; // approx 1 ms
     let max_pulse = 410.0; // approx 2 ms
     let center = (min_pulse + max_pulse) / 2.0;
     let range = (max_pulse - min_pulse) / 2.0;
-    let pulse_width = (center + angle / 90.0 * range).round() as u16;
+    let pulse_width = (center + angle / ((MAX_ANGLE - MIN_ANGLE) / 2.0) * range).round() as u16;
     println!("Pulse width: {}", pulse_width);
     pulse_width
 }
