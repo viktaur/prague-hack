@@ -889,6 +889,8 @@ dependencies = [
  "actix-web",
  "anyhow",
  "rppal",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

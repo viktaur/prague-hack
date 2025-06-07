@@ -7,3 +7,8 @@ edition = "2021"
 actix-web = "4.11.0"
 anyhow = "1.0.98"
 rppal = "0.22.1"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+
+[target.armv7-unknown-linux-gnueabihf]
+linker = "armv-linux-gnueabihf-gcc"

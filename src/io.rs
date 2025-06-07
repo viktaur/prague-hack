@@ -1,43 +1,51 @@
 use rppal::{i2c::I2c, pwm::Channel};
 use anyhow::Result;
 
-const PCA9685_ADDR: u16 = 0x40; // Default I2C address
-const SERVO_CHANNEL: u8 = 0; // Servo connected to channel 0
+// Default I2C address. It's just a way for the master to address the slave device.
+const PCA9685_ADDR: u16 = 0x40;
+const SERVO_CHANNEL: u8 = 0; // Servo connected to channel 0. If we had another one is would be 1, and 2, and so on.
+// This is the frequency that the servo expects.
 const PWM_FREQ_HZ: f64 = 50.0;
+// This is because we have 12 bits to represent each of the PWM steps (2^12)
 const PWM_RESOLUTION: u16 = 4096;
 
-/// Converts the angle we want to turn to the pulse width.
-pub fn angle_to_pulse_width(angle: f64) -> u16 {
-    let min = 150; // a bit before 1 ms
-    let max = 600; // a bit after 2 ms (to be safe)
-    min + ((max - min) as f64 * angle / 180.0) as u16
+/// Converts the positional angle we want to the corresponding steps.
+pub fn angle_to_pulse_width(angle: f32) -> u16 {
+    let angle = angle.clamp(-90.0, 90.0);
+    let min_pulse = 205.0; // approx 1 ms
+    let max_pulse = 410.0; // approx 2 ms
+    let center = (min_pulse + max_pulse) / 2.0;
+    let range = (max_pulse - min_pulse) / 2.0;
+    let pulse_width = (center + angle / 90.0 * range).round() as u16;
+    println!("Pulse width: {}", pulse_width);
+    pulse_width
 }
 
-pub fn write_to_pca(
-    // Channel is which PWM output channel to control
-    channel: u8,
-    // The point in the 12-bit PWM cycle when the signal should turn off.
-    on_value: u16) -> Result<()>
-{
+pub fn write_to_pca(channel: u8, pulse_width: u16) -> Result<()> {
     let mut i2c = I2c::new()?;
-    // Tells the peripheral to talk to the device at the specified address.
     i2c.set_slave_address(PCA9685_ADDR)?;
 
-    // Set PWM frequency to 50 Hz (only needs to be done once ideally)
+    // Only do this once ideally
     let prescale_val = ((25_000_000.0 / (4096.0 * PWM_FREQ_HZ)) - 1.0).round() as u8;
-    i2c.smbus_write_byte(0x00, 0x10)?; // Sleep mode
-    i2c.smbus_write_byte(0xFE, prescale_val)?; // Prescale register
-    i2c.smbus_write_byte(0x00, 0x20)?; // Wake up and auto-increment
+    i2c.smbus_write_byte(0x00, 0x10)?; // Sleep
+    i2c.smbus_write_byte(0xFE, prescale_val)?; // Set prescale
+    i2c.smbus_write_byte(0x00, 0x20)?; // Wake + auto-increment
 
-    // Calculate registers
-    let on_l = 0x06 + 4 * channel;
-    let off_val = on_value;
-    let on_val = 0;
+    println!("Frequency set to {}", PWM_FREQ_HZ);
 
-    i2c.smbus_write_byte(on_l, (on_val & 0xFF) as u8)?;
-    i2c.smbus_write_byte(on_l + 1, (on_val >> 8) as u8)?;
-    i2c.smbus_write_byte(on_l + 2, (off_val & 0xFF) as u8)?;
-    i2c.smbus_write_byte(on_l + 3, (off_val >> 8) as u8)?;
+    let on_val: u16 = 0;
+    let off_val = on_val + pulse_width;
+
+    println!("On val: {}, off val: {}", on_val, off_val);
+
+    let base_addr = 0x06 + 4 * channel;
+
+    i2c.smbus_write_byte(base_addr, (on_val & 0xFF) as u8)?;         // LEDn_ON_L
+    i2c.smbus_write_byte(base_addr + 1, (on_val >> 8) as u8)?;       // LEDn_ON_H
+    i2c.smbus_write_byte(base_addr + 2, (off_val & 0xFF) as u8)?;    // LEDn_OFF_L
+    i2c.smbus_write_byte(base_addr + 3, (off_val >> 8) as u8)?;      // LEDn_OFF_H
+
+    println!("LED on/off L/H values written to smbus");
 
     Ok(())
 }
