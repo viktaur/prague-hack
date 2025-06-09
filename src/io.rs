@@ -14,8 +14,8 @@ const PWM_RESOLUTION: u16 = 4096;
 /// Converts the positional angle we want to the corresponding steps.
 pub fn angle_to_pulse_width(angle: f32) -> u16 {
     let angle = angle.clamp(MIN_ANGLE, MAX_ANGLE);
-    let min_pulse = 205.0; // approx 1 ms
-    let max_pulse = 410.0; // approx 2 ms
+    let min_pulse = 102.4; // approx 0.5 ms (before, 150)
+    let max_pulse = 512.0; // approx 2.5 ms (before, 450)
     let center = (min_pulse + max_pulse) / 2.0;
     let range = (max_pulse - min_pulse) / 2.0;
     let pulse_width = (center + angle / ((MAX_ANGLE - MIN_ANGLE) / 2.0) * range).round() as u16;
@@ -34,7 +34,6 @@ pub fn write_to_pca(channel: u8, pulse_width: u16) -> Result<()> {
     i2c.smbus_write_byte(0x00, 0x20)?; // Wake + auto-increment
 
     println!("Frequency set to {}", PWM_FREQ_HZ);
-
     let on_val: u16 = 0;
     let off_val = on_val + pulse_width;
 
